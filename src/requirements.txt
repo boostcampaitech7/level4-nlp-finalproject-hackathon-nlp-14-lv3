@@ -1,0 +1,9 @@
+datasets
+langchain
+langchain-community
+langchain-huggingface
+faiss-cpu
+transformers
+accelerate
+torch
+PyPDF2
