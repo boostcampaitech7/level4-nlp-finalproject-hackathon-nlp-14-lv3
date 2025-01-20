@@ -23,5 +23,5 @@ git clone git@github.com:boostcampaitech7/level4-nlp-finalproject-hackathon-nlp-
 cd level4-nlp-finalproject-hackathon-nlp-14-lv3 &&
 git submodule update --init &&
 git checkout dev &&
-pip install -r /data/ephemeral/home/final/src/requirements.txt
+pip install -r ./src/requirements.txt
 ```
