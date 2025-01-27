@@ -128,3 +128,54 @@ def search_similar_content(query_vector, limit: int = 5):
     """)
     results = engine.connect().execute(query)
     return [dict(row._mapping) for row in results]
+
+
+
+def retrieve_contexts(query: str) -> list[str]:
+    query_vector = embedding_model.get_embedding(query)
+    limit = 3
+
+    vector_array = f"[{','.join(str(x) for x in query_vector)}]"
+    query = text(f"""
+    WITH similar_docs AS (
+        SELECT paragraph_id 
+        FROM embedding
+        ORDER BY text_embedding_vector <-> '{vector_array}'::vector
+        LIMIT {limit}
+    )
+    SELECT 
+        r.company_name,
+        r.stockfirm_name, 
+        r.report_date,
+        p.paragraph_text,
+        p.is_tabular,
+        p.is_image,
+        t.tabular_text,
+        i.image_text
+    FROM similar_docs sd
+    JOIN paragraph p ON sd.paragraph_id = p.paragraph_id
+    JOIN report r ON p.report_id = r.report_id
+    LEFT JOIN tabular t ON p.paragraph_id = t.paragraph_id AND p.is_tabular = True
+    LEFT JOIN image i ON p.paragraph_id = i.paragraph_id AND p.is_image = True
+    """)
+    results = engine.connect().execute(query)
+    docs = [dict(row._mapping) for row in results]
+
+    formatted_docs = []
+    for doc in docs:
+        _text = f"""
+        Company: {doc['company_name']}
+        Date: {doc['report_date']}
+        Content: {doc['paragraph_text']}
+        """
+        if doc['is_tabular']:
+            _text += f"Table: {doc['tabular_text']}\n"
+        if doc['is_image']:
+            _text += f"Image Content: {doc['image_text']}\n"
+        formatted_docs.append(_text)
+    return formatted_docs
+
+def generate_answer(query: str, contexts: list[str]) -> str:
+    context = "\n---\n".join(contexts)
+    answer = chain.invoke({"question": query, "context": context})
+    return answer
