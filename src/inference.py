@@ -3,16 +3,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 from text_embedding import EmbeddingModel  # 임베딩 모델 (bge-m3) 불러오기
+from load_engine import SqlEngine
 from typing import List
 from sqlalchemy import text
 load_dotenv()
-#from load_engine import connect_with_connector
-from fastapi import Request, Depends
-from main import get_embedding_model, get_engine
 
-#embedding_model = EmbeddingModel()
-#embedding_model.load_model()
-#engine = connect_with_connector()
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", "You are a helpful assistant. Please respond to the user's request only based on the given context."),
@@ -23,9 +18,14 @@ output_parser = StrOutputParser()
 chain = prompt | model | output_parser
 
 
+embedding_model = EmbeddingModel()
+embedding_model.load_model()
 
-def RAG(query: str, embedding_model: EmbeddingModel = Depends(get_embedding_model)) -> str:
+engine = SqlEngine()
 
+
+def RAG(query: str) -> str:
+    
     # TODO: 임베딩 함수 구현 (bge m3 사용하기)
     embedding = embedding_model.get_embedding(query)
 
@@ -73,7 +73,8 @@ def run_inference(query: str) -> str:
         context = RAG(query)
         context = format_retrieved_docs(context)
 
-        response = chain.invoke({"question": query, "context": context})
+        #response = chain.invoke({"question": query, "context": context})
+        response = context  #TEST CODE
         
         if not response or not response.strip():
             raise ValueError("The model returned an empty or invalid response.")
@@ -101,7 +102,7 @@ Content: {doc['paragraph_text']}
     
     return "\n---\n".join(formatted_docs)
 
-def search_similar_content(query_vector, limit: int = 5, engine: Engine = Depends(get_engine)):
+def search_similar_content(query_vector, limit: int = 5):
     vector_array = f"[{','.join(str(x) for x in query_vector)}]"
     query = text(f"""
     WITH similar_docs AS (
@@ -125,5 +126,5 @@ def search_similar_content(query_vector, limit: int = 5, engine: Engine = Depend
     LEFT JOIN tabular t ON p.paragraph_id = t.paragraph_id AND p.is_tabular = True
     LEFT JOIN image i ON p.paragraph_id = i.paragraph_id AND p.is_image = True
     """)
-    results = engine.execute(query)
+    results = engine.connect().execute(query)
     return [dict(row._mapping) for row in results]
