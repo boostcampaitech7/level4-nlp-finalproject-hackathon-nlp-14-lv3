@@ -2,11 +2,12 @@ datasets
 langchain
 langchain-community
 langchain-huggingface
-faiss-cpu
 transformers
 accelerate
 torch
-PyPDF2
 pre-commit==4.0.1
 black==24.10.0
 isort==5.13.2
+FlagEmbedding
+cloud-sql-python-connector[pg8000]
+google-api-python-client 
