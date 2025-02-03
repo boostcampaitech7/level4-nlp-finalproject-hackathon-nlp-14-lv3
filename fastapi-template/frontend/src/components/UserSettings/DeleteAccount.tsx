@@ -6,7 +6,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react"
 
-import DeleteConfirmation from "./DeleteConfirmation"
+// import DeleteConfirmation from "./DeleteConfirmation"
 
 const DeleteAccount = () => {
   const confirmationModal = useDisclosure()
@@ -24,10 +24,10 @@ const DeleteAccount = () => {
         <Button variant="danger" mt={4} onClick={confirmationModal.onOpen}>
           Delete
         </Button>
-        <DeleteConfirmation
+        {/* <DeleteConfirmation
           isOpen={confirmationModal.isOpen}
           onClose={confirmationModal.onClose}
-        />
+        /> */}
       </Container>
     </>
   )

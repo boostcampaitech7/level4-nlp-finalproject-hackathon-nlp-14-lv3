@@ -12,7 +12,7 @@ import { FiEdit, FiTrash } from "react-icons/fi"
 import type { ItemPublic, UserPublic } from "../../client"
 import EditUser from "../Admin/EditUser"
 import EditItem from "../Items/EditItem"
-import Delete from "./DeleteAlert"
+// import Delete from "./DeleteAlert"
 
 interface ActionsMenuProps {
   type: string
@@ -61,12 +61,12 @@ const ActionsMenu = ({ type, value, disabled }: ActionsMenuProps) => {
             onClose={editUserModal.onClose}
           />
         )}
-        <Delete
+        {/* <Delete
           type={type}
           id={value.id}
           isOpen={deleteModal.isOpen}
           onClose={deleteModal.onClose}
-        />
+        /> */}
       </Menu>
     </>
   )
