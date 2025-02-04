@@ -41,7 +41,7 @@ def change_file_name(company_paths):
                     
                     securities_firms_dict = {
                                             "교보증권": ["kyobo", "교보증권"],
-                                            "SK증권": ["sk", "SK증권"],
+                                            "SK증권": ["SK증권"],
                                             "미래에셋증권": ["miraeasset", "미래에셋증권"],
                                             "IBK투자증권": ["ibk", "IBK투자증권"],
                                             "한화투자증권": ["hanwha", "한화투자증권"],
@@ -50,15 +50,15 @@ def change_file_name(company_paths):
                                             "유안타증권": ["yuanta", "유안타증권"],
                                             "유진투자증권": ["eugene", "유진투자증권"],
                                             "키움증권": ["kiwoom", "키움증권"],
-                                            "DS투자증권": ["ds", "DS투자증권"],
-                                            "iM증권": ["im", "iM증권"],
+                                            "DS투자증권": ["DS투자증권"],
+                                            "iM증권": ["iM증권"],
                                             "메리츠증권": ["meritz", "메리츠증권"],
                                             "삼성증권": ["samsung", "삼성증권"],
                                             "대신증권": ["daishin", "대신증권"],
                                             "DB금융투자": ["dbfinancial", "DB금융투자"],
-                                            "NH투자증권": ["nh", "NH투자증권"],
+                                            "NH투자증권": ["NH투자증권"],
                                             "현대차증권": ["hyundai", "현대차증권"],
-                                            "LS증권": ["ls", "LS증권"],
+                                            "LS증권": ["LS증권"],
                                             "한국신용평가": ["koreacreditrating", "한국신용평가"]
                                         }
 
@@ -66,18 +66,25 @@ def change_file_name(company_paths):
                     # 파일명에서 증권사 이름 먼저 찾기
                     securities_name = None
                     file_name_lower = file_name.lower()
-                    for firm in securities_firms_dict:
-                        if firm.lower() in file_name_lower:
-                            securities_name = firm
+
+                    for firm_name, keywords in securities_firms_dict.items():
+                        for keyword in keywords:
+                            if keyword.lower() in file_name_lower:
+                                securities_name = firm_name  # 딕셔너리의 키 값 설정
+                                break
+                        if securities_name:
                             break
 
                     # 파일명에서 찾지 못하면 PDF 본문에서 검색
                     if not securities_name:
-                        pdf_text = "\n".join([str(page) for page in llama_docs]).lower()
+                        pdf_text = "\n".join([page.text_resource.text for page in llama_docs if page.text_resource.text]).lower()
                     
-                        for firm in securities_firms_dict:
-                            if firm.lower() in pdf_text:
-                                securities_name = firm
+                        for firm_name, keywords in securities_firms_dict.items():
+                            for keyword in keywords:
+                                if keyword.lower() in pdf_text:
+                                    securities_name = firm_name
+                                    break
+                            if securities_name:
                                 break
                     
                     # 여전히 없으면 기본값 사용
