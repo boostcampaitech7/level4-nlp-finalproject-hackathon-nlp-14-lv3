@@ -4,8 +4,8 @@ import uuid
 from sqlalchemy import insert
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import MetaData
-from text_embedding import EmbeddingModel 
-from utils import clean_korean_text, clean_text
+from src.text_embedding import EmbeddingModel 
+from src.utils.utils import clean_korean_text, clean_text
 
 def process_excel_and_insert_data(engine, base_dir):
     """

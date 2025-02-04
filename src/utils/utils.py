@@ -4,18 +4,19 @@ from typing import List
 
 import pandas as pd
 from konlpy.tag import Okt
-from langchain_core.documents import Document
+#from langchain_core.documents import Document
 from sqlalchemy import RowMapping
 
 okt = Okt()
 
 
+# 사용하지 않는 Document 주석 처리, 만일 사용할 때가 온다면 주석 제거 후 사용용
 def create_documents(rows: List[RowMapping]):
     documents = []
     all_texts = get_info_and_texts(rows)
     for metadata, text in all_texts:
         text = clean_korean_text(text)
-        documents.append(Document(page_content=text, metadata=metadata))
+        #documents.append(Document(page_content=text, metadata=metadata))
     return documents
 
 
