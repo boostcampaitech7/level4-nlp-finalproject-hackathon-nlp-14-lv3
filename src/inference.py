@@ -1,18 +1,27 @@
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from dotenv import load_dotenv
-from text_embedding import EmbeddingModel  # 임베딩 모델 (bge-m3) 불러오기
-from load_engine import SqlEngine
 from typing import List
+
+from dotenv import load_dotenv
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 from sqlalchemy import text
+
+from src.bm25retriever_with_scores import CustomizedOkapiBM25
+from src.text_embedding import EmbeddingModel  # 임베딩 모델 (bge-m3) 불러오기
+from src.utils.load_engine import SqlEngine
+
 load_dotenv()
 
 
-prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant. Please respond to the user's request only based on the given context."),
-    ("user", "Context: {context}\nQuestion: {question}\nAnswer:")
-])
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are a helpful assistant. Please respond to the user's request only based on the given context.",
+        ),
+        ("user", "Context: {context}\nQuestion: {question}\nAnswer:"),
+    ]
+)
 model = ChatOpenAI(model="gpt-4o-mini")
 output_parser = StrOutputParser()
 chain = prompt | model | output_parser
@@ -23,43 +32,36 @@ embedding_model.load_model()
 
 engine = SqlEngine()
 
+sparse_retriever = CustomizedOkapiBM25()
+sparse_retriever.load_retriever(engine, k=5)
 
-def RAG(query: str) -> str:
-    
-    # TODO: 임베딩 함수 구현 (bge m3 사용하기)
-    embedding = embedding_model.get_embedding(query)
 
-    # TODO: db에서 추출하는 함수 구현 (함수 input, output 설계)
-    # INPUT: {임베딩, k} OUTPUT: 문자열 리스트
-    #context = GET_CONTEXT_FROM_DB(embedding, k)
+def RAG(query: str, spr_limit: int = 10, dpr_limit: int = 3) -> str:
+    """
+    query_embedding: 문자열 query의 임베딩 결과
 
-    # DEMO (하드코딩)
-    # context: List[str] = ['''2024년 12월 04일 I 기업분석_기업분석(Report)
-    # CJ제일제당 (097950)
-    # 선택과 집중 긍정적 + 가격 매력
-    # BUY (유지)
-    # 목표주가(12M) 480,000원 
-    # 현재주가(12.03) 271,500원''',
-    # '''Key Data
-    # KOSPI 지수 (pt) 2,500.10
-    # 52주 최고/최저(원) 398,000/240,500
-    # 시가총액(십억원) 4,087.2
-    # 시가총액비중(%) 0.20
-    # 발행주식수(천주) 15,054.2
-    # 60일 평균 거래량(천주) 45.9
-    # 60일 평균 거래대금(십억원) 12.9
-    # 외국인지분율(%) 23.78
-    # 주요주주 지분율(%)
-    # CJ 외 8 인 45.51
-    # 국민연금공단 11.86
-    # Consensus Data
-    # <table>
-    # 2024 2025
-    # 매출액(십억원) 29,494.8 30,537.6
-    # </table>''',]
-    context = search_similar_content(embedding, 3)
-    
-    return context
+    paragraph_ids: BM25 기반 문자열 query와 유사도가 높은 문서들의 paragraph_id 리스트
+    - BM25 문서 갯수는 sparse_retriever.load_retriever(engine, k=5)에서 k값 조절
+
+    ordered_ids: paragraph_id를 재정렬한 리스트
+    - BM25 유사도가 높은 문서들 중에서 query_embedding 벡터와 유사도가 가장 높은 문서 순서대로
+    - dpr_limit 갯수만큼만 문서를 가져옴
+
+    contexts: 원본 텍스트들의 리스트
+    - paragraph_id 리스트에서 재정렬를 실행하고 이에 대응하는 원본 텍스트를 가져옴
+
+
+
+    의문점)
+    지금은 임베딩 벡터를 원본 텍스트에서 숫자만 제거한거로 만들고 있는데
+    임베딩 하기전에 한국어 전처리로 단어제거(불용어 등), 특수문자 제거, stem 단어 변환 등을 하는게 더 좋을 것 같아요 -> 비교를 해보죠 저의들의 평가 데이터셋으로 제거하는 과정은 얼마걸리지 않으니깐
+
+    """
+    query_embedding = embedding_model.get_embedding(query)
+    paragraph_ids = sparse_retriever.get_pids_from_sparse(query)
+    ordered_ids = run_dense_retriever(query_embedding, paragraph_ids)
+    contexts = sparse_retriever.get_contexts_by_ids(ordered_ids, dpr_limit)
+    return contexts
 
 
 def run_inference(query: str) -> str:
@@ -67,115 +69,71 @@ def run_inference(query: str) -> str:
     try:
         if not query:
             raise ValueError("query is empty or only contains whitespace.")
-        
 
-        # TODO: RAG 함수 구현
-        context = RAG(query)
-        context = format_retrieved_docs(context)
+        contexts = RAG(query)
+        context = format_retrieved_docs(contexts)
+        response = chain.invoke({"question": query, "context": context})
 
-        #response = chain.invoke({"question": query, "context": context})
-        response = context  #TEST CODE
-        
         if not response or not response.strip():
             raise ValueError("The model returned an empty or invalid response.")
-        
+
         return response
     except Exception as e:
         print(f"Error during inference: {e}")
         return "An error occurred during inference. Please try again later."
 
 
-def format_retrieved_docs(docs):
+def run_evaluation(query: str) -> str:
+    query = query.strip()
+    try:
+        if not query:
+            raise ValueError("query is empty or only contains whitespace.")
+
+        context = RAG(query)
+        contexts, joined_context = format_retrieved_docs(
+            context, return_single_str=False
+        )
+        response = chain.invoke({"question": query, "context": joined_context})
+
+        if not response or not response.strip():
+            raise ValueError("The model returned an empty or invalid response.")
+
+        return {"context": contexts, "answer": response}
+    except Exception as e:
+        print(f"Error during inference: {e}")
+        return "An error occurred during inference. Please try again later."
+
+
+def format_retrieved_docs(docs: List[str], return_single_str=True):
     # RAG된 docs Formatting 진행
     formatted_docs = []
     for doc in docs:
-        text = f"""
-Company: {doc['company_name']}
-Date: {doc['report_date']}
-Content: {doc['paragraph_text']}
-"""
-        if doc['is_tabular']:
-            text += f"Table: {doc['tabular_text']}\n"
-        if doc['is_image']:
-            text += f"Image Content: {doc['image_text']}\n"
+        text = f"""Company: {doc['company_name']} Date: {doc['report_date']} Content: {doc['paragraph_text']}"""
         formatted_docs.append(text)
-    
-    return "\n---\n".join(formatted_docs)
+    joined_formatted_docs = "\n---\n".join(formatted_docs)
+    if return_single_str:
+        return joined_formatted_docs
+    else:
+        return formatted_docs, joined_formatted_docs
 
-def search_similar_content(query_vector, limit: int = 5):
+
+def run_dense_retriever(query_vector: List[float], paragraph_ids: List[str]):
     vector_array = f"[{','.join(str(x) for x in query_vector)}]"
-    query = text(f"""
-    WITH similar_docs AS (
-        SELECT paragraph_id 
-        FROM embedding
-        ORDER BY text_embedding_vector <-> '{vector_array}'::vector
-        LIMIT {limit}
+    joined_ids = ", ".join(f"'{str(u)}'" for u in paragraph_ids)
+    query = text(
+        f"""
+SELECT paragraph_id 
+FROM embedding
+WHERE paragraph_id in ({joined_ids})
+ORDER BY text_embedding_vector <-> '{vector_array}'::vector
+"""
     )
-    SELECT 
-        r.company_name,
-        r.stockfirm_name, 
-        r.report_date,
-        p.paragraph_text,
-        p.is_tabular,
-        p.is_image,
-        t.tabular_text,
-        i.image_text
-    FROM similar_docs sd
-    JOIN paragraph p ON sd.paragraph_id = p.paragraph_id
-    JOIN report r ON p.report_id = r.report_id
-    LEFT JOIN tabular t ON p.paragraph_id = t.paragraph_id AND p.is_tabular = True
-    LEFT JOIN image i ON p.paragraph_id = i.paragraph_id AND p.is_image = True
-    """)
-    results = engine.connect().execute(query)
-    return [dict(row._mapping) for row in results]
+    results = engine.conn.execute(query)
+    return [row for row in results]
 
 
-
-def retrieve_contexts(query: str) -> list[str]:
-    query_vector = embedding_model.get_embedding(query)
-    limit = 3
-
-    vector_array = f"[{','.join(str(x) for x in query_vector)}]"
-    query = text(f"""
-    WITH similar_docs AS (
-        SELECT paragraph_id 
-        FROM embedding
-        ORDER BY text_embedding_vector <-> '{vector_array}'::vector
-        LIMIT {limit}
-    )
-    SELECT 
-        r.company_name,
-        r.stockfirm_name, 
-        r.report_date,
-        p.paragraph_text,
-        p.is_tabular,
-        p.is_image,
-        t.tabular_text,
-        i.image_text
-    FROM similar_docs sd
-    JOIN paragraph p ON sd.paragraph_id = p.paragraph_id
-    JOIN report r ON p.report_id = r.report_id
-    LEFT JOIN tabular t ON p.paragraph_id = t.paragraph_id AND p.is_tabular = True
-    LEFT JOIN image i ON p.paragraph_id = i.paragraph_id AND p.is_image = True
-    """)
-    results = engine.connect().execute(query)
-    docs = [dict(row._mapping) for row in results]
-
-    formatted_docs = []
-    for doc in docs:
-        _text = f"""
-        Company: {doc['company_name']}
-        Date: {doc['report_date']}
-        Content: {doc['paragraph_text']}
-        """
-        if doc['is_tabular']:
-            _text += f"Table: {doc['tabular_text']}\n"
-        if doc['is_image']:
-            _text += f"Image Content: {doc['image_text']}\n"
-        formatted_docs.append(_text)
-    return formatted_docs
-
-def generate_answer(query: str, contexts: list[str]) -> str:
-    context = "\n---\n".join(contexts)
-    answer = chain.invoke({"question": query, "context": context})
-    return answer
+if __name__ == "__main__":
+    while True:
+        query = input("질의를 입력해주세요: ")
+        result = run_inference(query)
+        print(result)

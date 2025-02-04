@@ -1,6 +1,8 @@
 from dotenv import load_dotenv
-from create_table import connect_with_connector, create_table, check_table_exists
-from data_insert import process_excel_and_insert_data
+
+from src.utils.create_table import (check_table_exists, connect_with_connector,
+                                    create_table)
+from src.utils.data_insert import process_excel_and_insert_data
 
 load_dotenv()
 

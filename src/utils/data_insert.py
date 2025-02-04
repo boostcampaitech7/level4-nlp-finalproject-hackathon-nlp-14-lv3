@@ -1,11 +1,13 @@
 import os
-import pandas as pd
-import uuid
 import re
-from sqlalchemy import insert
+import uuid
+
+import pandas as pd
+from sqlalchemy import MetaData, insert
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import MetaData
-from text_embedding import EmbeddingModel 
+
+from text_embedding import EmbeddingModel
+
 
 def process_excel_and_insert_data(engine, base_dir):
     """
@@ -23,7 +25,7 @@ def process_excel_and_insert_data(engine, base_dir):
     paragraph_table = metadata.tables["paragraph"]
     tabular_table = metadata.tables["tabular"]
     image_table = metadata.tables["image"]
-    embedding_table = metadata.tables["embedding"] ###
+    embedding_table = metadata.tables["embedding"]  ###
 
     # Initialize the embedding model ###
     embedding_model = EmbeddingModel()
@@ -96,27 +98,49 @@ def process_excel_and_insert_data(engine, base_dir):
                     paragraph_insert = {
                         "paragraph_id": paragraph_id,
                         "report_id": report_id,
-                        "paragraph_text": combined_paragraph if combined_paragraph else "None",
+                        "paragraph_text": (
+                            combined_paragraph if combined_paragraph else "None"
+                        ),
                         "is_tabular": bool(tabular_ids),
                         "is_image": bool(image_ids),
                     }
                     session.execute(insert(paragraph_table), paragraph_insert)
-                    
+
                     # Insert tabular data
-                    for tabular_id, part in zip(tabular_ids, [p for p in parts if p.startswith("<table>") and p.endswith("</table>")]):
-                        session.execute(insert(tabular_table), {
-                            "tabular_id": tabular_id,
-                            "paragraph_id": paragraph_id,
-                            "tabular_text": part.strip(),
-                        })
+                    for tabular_id, part in zip(
+                        tabular_ids,
+                        [
+                            p
+                            for p in parts
+                            if p.startswith("<table>") and p.endswith("</table>")
+                        ],
+                    ):
+                        session.execute(
+                            insert(tabular_table),
+                            {
+                                "tabular_id": tabular_id,
+                                "paragraph_id": paragraph_id,
+                                "tabular_text": part.strip(),
+                            },
+                        )
 
                     # Insert image data
-                    for image_id, part in zip(image_ids, [p for p in parts if p.startswith("<img alt=") and p.endswith("/>")]):
-                        session.execute(insert(image_table), {
-                            "image_id": image_id,
-                            "paragraph_id": paragraph_id,
-                            "image_text": part.strip(),
-                        })
+                    for image_id, part in zip(
+                        image_ids,
+                        [
+                            p
+                            for p in parts
+                            if p.startswith("<img alt=") and p.endswith("/>")
+                        ],
+                    ):
+                        session.execute(
+                            insert(image_table),
+                            {
+                                "image_id": image_id,
+                                "paragraph_id": paragraph_id,
+                                "image_text": part.strip(),
+                            },
+                        )
 
                     # Generate embedding vector for embedding_text
                     embedding_vector = None

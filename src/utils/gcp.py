@@ -1,9 +1,10 @@
 import os
+
 import pg8000
-from sqlalchemy import text
+import sqlalchemy
 from dotenv import load_dotenv
 from google.cloud.sql.connector import Connector, IPTypes
-import sqlalchemy 
+from sqlalchemy import text
 
 load_dotenv()
 
@@ -31,7 +32,7 @@ def connect_with_connector() -> sqlalchemy.engine.base.Engine:
     # initialize Cloud SQL Python Connector object
     connector = Connector()
 
-    #해당 줄에서 에러가 발생된다면, GCP에서 사용자 추가할 것
+    # 해당 줄에서 에러가 발생된다면, GCP에서 사용자 추가할 것
     def getconn() -> pg8000.dbapi.Connection:
         conn: pg8000.dbapi.Connection = connector.connect(
             instance_connection_name,
@@ -53,13 +54,16 @@ def connect_with_connector() -> sqlalchemy.engine.base.Engine:
     print("Success Connect!")
     return pool.connect()
 
-def get_embedding(conn):
-    query = text(f"""
+
+def get_embedding(engine):
+    query = text(
+        f"""
 WITH similar_docs AS (
-    SELECT paragraph_id 
+    SELECT paragraph_id
     FROM embedding
 )
 SELECT
+    p.paragraph_id,
     r.company_name,
     r.stockfirm_name,
     r.report_id,
@@ -83,8 +87,7 @@ GROUP BY
     r.report_date,
     p.paragraph_id,
     p.paragraph_text
-""")
-    results = conn.execute(query)
-    print(f"Fetching from GCP succeed")
+"""
+    )
+    results = engine.conn.execute(query)
     return [result for result in results.mappings()]
-
