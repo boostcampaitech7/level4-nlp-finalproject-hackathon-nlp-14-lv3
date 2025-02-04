@@ -16,8 +16,8 @@ if __name__ == "__main__":
     check_table_exists(engine, "paragraph")
     check_table_exists(engine, "embedding")
 
-    # Define base directory
-    BUCKET_NAME = "nlp14"
+    # Define base directory, src에서 실행할 경우 ../data/랩큐 로 변경
+    BASE_DIR = "data/랩큐"
 
     # Process and insert data
-    process_excel_and_insert_data(engine, BUCKET_NAME)
+    process_excel_and_insert_data(engine, BASE_DIR)
