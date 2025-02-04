@@ -140,7 +140,7 @@ def upload_file(bucket_name, local_file_path, destination_blob_name):
 
 # 파일 수정 후 Cloud Storage에 업로드
 
-def upload_files_cloud_storage():
+def upload_files_cloud_storage(bucket_name, company_paths):
     """
     회사 폴더 내 파일을 타입별로 분류하여 GCP Storage에 업로드하는 함수.
     """
