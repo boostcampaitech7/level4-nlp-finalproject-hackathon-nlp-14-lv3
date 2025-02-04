@@ -16,11 +16,9 @@ if __name__ == "__main__":
     # Verify the tables exist
     check_table_exists(engine, "report")
     check_table_exists(engine, "paragraph")
-    check_table_exists(engine, "tabular")
-    check_table_exists(engine, "image")
     check_table_exists(engine, "embedding")
 
-    # Define base directory
+    # Define base directory, scripts 경로에서 실행할 경우 ../data/랩큐로 변경
     BASE_DIR = "../data/랩큐"
 
     # Process and insert data

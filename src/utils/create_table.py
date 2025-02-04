@@ -1,12 +1,11 @@
 import os
 
-import pg8000
-import sqlalchemy
 from google.cloud.sql.connector import Connector, IPTypes
-from pgvector.sqlalchemy import Vector
-from sqlalchemy import (ARRAY, BOOLEAN, DATE, TEXT, UUID, VARCHAR, Column,
-                        ForeignKey, MetaData, Table, inspect)
+import pg8000
 
+import sqlalchemy
+from sqlalchemy import Table, Column, MetaData, ForeignKey, VARCHAR, DATE, TEXT, ARRAY, BOOLEAN, UUID, inspect
+from pgvector.sqlalchemy import Vector
 
 def connect_with_connector() -> sqlalchemy.engine.base.Engine:
     """
@@ -31,7 +30,7 @@ def connect_with_connector() -> sqlalchemy.engine.base.Engine:
     # initialize Cloud SQL Python Connector object
     connector = Connector()
 
-    # 해당 줄에서 에러가 발생된다면, GCP에서 사용자 추가할 것
+    #해당 줄에서 에러가 발생된다면, GCP에서 사용자 추가할 것
     def getconn() -> pg8000.dbapi.Connection:
         conn: pg8000.dbapi.Connection = connector.connect(
             instance_connection_name,
@@ -49,7 +48,7 @@ def connect_with_connector() -> sqlalchemy.engine.base.Engine:
         "postgresql+pg8000://",
         creator=getconn,
     )
-
+    
     print("Success Connect!")
     return pool
 
@@ -63,65 +62,29 @@ def create_table(engine):
     report = Table(
         "report",
         metadata,
-        Column("report_id", UUID, primary_key=True),
-        Column("company_name", VARCHAR(30), nullable=False),
-        Column("stockfirm_name", VARCHAR(30), nullable=False),
-        Column("report_date", DATE, nullable=False),
+        Column("report_id", UUID, primary_key=True),  
+        Column("company_name", VARCHAR(30), nullable=False),  
+        Column("stockfirm_name", VARCHAR(30), nullable=False),  
+        Column("report_date", DATE, nullable=False),  
     )
 
     # Paragraph table
-    # paragraph_text에 null이 들어가면, 해당 표 혹은 img는 특정 문단이 없는 것으로 간주
     paragraph = Table(
         "paragraph",
         metadata,
-        Column("paragraph_id", UUID, primary_key=True),
-        Column(
-            "report_id", UUID, ForeignKey("report.report_id"), nullable=False
-        ),  # Foreign key to report
-        Column("paragraph_text", TEXT, nullable=True),
-        Column(
-            "is_tabular", BOOLEAN, nullable=False, default=False
-        ),  # Indicates if a tabular exists
-        Column(
-            "is_image", BOOLEAN, nullable=False, default=False
-        ),  # Indicates if an image exists
-    )
-
-    # Tabular table
-    tabular = Table(
-        "tabular",
-        metadata,
-        Column("tabular_id", UUID, primary_key=True),
-        Column(
-            "paragraph_id", UUID, ForeignKey("paragraph.paragraph_id"), nullable=False
-        ),  # Foreign key to paragraph
-        Column("tabular_text", TEXT, nullable=False),
-    )
-
-    # Image table
-    image = Table(
-        "image",
-        metadata,
-        Column("image_id", UUID, primary_key=True),
-        Column(
-            "paragraph_id", UUID, ForeignKey("paragraph.paragraph_id"), nullable=False
-        ),  # Foreign key to paragraph
-        Column("image_text", TEXT, nullable=False),
+        Column("paragraph_id", UUID, primary_key=True),  
+        Column("report_id", UUID, ForeignKey("report.report_id"), nullable=False),  # Foreign key to report
+        Column("paragraph_text", TEXT, nullable=True),  
     )
 
     # Embedding table
     embedding = Table(
         "embedding",
         metadata,
-        Column("embedding_id", UUID, primary_key=True),
-        Column(
-            "paragraph_id", UUID, ForeignKey("paragraph.paragraph_id"), nullable=False
-        ),  # Foreign key to paragraph
-        Column(
-            "text_embedding_vector", Vector(1024), nullable=False
-        ),  # Embedding vector
-        Column("tabular_id", ARRAY(UUID), nullable=True),  # Array of tabular IDs
-        Column("image_id", ARRAY(UUID), nullable=True),  # Array of image IDs
+        Column("embedding_id", UUID, primary_key=True),  
+        Column("paragraph_id", UUID, ForeignKey("paragraph.paragraph_id"), nullable=False),  # Foreign key to paragraph
+        Column("text_embedding_vector", Vector(1024), nullable=False),  # Embedding vector
+        Column("clean_text_embedding_vector", Vector(1024), nullable=False),
     )
 
     # Create tables in the database
