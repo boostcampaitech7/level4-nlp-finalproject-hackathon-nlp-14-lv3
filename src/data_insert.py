@@ -1,13 +1,38 @@
 import os
+import io
 import pandas as pd
+import numpy as np
 import uuid
 import re
+
 from sqlalchemy import insert
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import MetaData
-from text_embedding import EmbeddingModel 
 
-def process_excel_and_insert_data(engine, base_dir):
+from google.cloud import storage
+from google.oauth2 import service_account
+
+from dotenv import load_dotenv
+
+from text_embedding import EmbeddingModel
+
+load_dotenv()
+
+def connect_to_gcs():
+    credentials = service_account.Credentials.from_service_account_file(
+        os.environ['JSON_FILE']
+    )
+    
+    try:
+        storage_client = storage.Client(credentials=credentials)
+        print("Google Cloud Storage에 성공적으로 연결되었습니다.")
+        return storage_client
+    except Exception as e:
+        print(f"Google Cloud Storage 연결 실패: {e}")
+        return None
+
+
+def process_excel_and_insert_data(engine, bucket_name):
     """
     Processes the Excel files and inserts data into the database.
     """
@@ -21,118 +46,83 @@ def process_excel_and_insert_data(engine, base_dir):
     # Access the necessary tables
     report_table = metadata.tables["report"]
     paragraph_table = metadata.tables["paragraph"]
-    tabular_table = metadata.tables["tabular"]
-    image_table = metadata.tables["image"]
-    embedding_table = metadata.tables["embedding"] ###
+    embedding_table = metadata.tables["embedding"]
 
-    # Initialize the embedding model ###
+    # Initialize the embedding model
     embedding_model = EmbeddingModel()
     embedding_model.load_model()
 
-    # Iterate through each company directory
-    for company_name in os.listdir(base_dir):
-        company_path = os.path.join(base_dir, company_name)
-        if not os.path.isdir(company_path):
-            continue
+    # Cloud Storage 연결
+    storage_client = connect_to_gcs()
+    bucket = storage_client.bucket(bucket_name)
+    
+    # GCS에서 data/ 경로 내 모든 파일 가져오기
+    blobs = storage_client.list_blobs(bucket_name, prefix="data/")
+    
+    # 회사별 디렉토리 추출
+    company_folders = set(blob.name.split("/")[1] for blob in blobs if len(blob.name.split("/")) > 2)
 
-        # Process each Excel file in the company directory
-        for excel_file in os.listdir(company_path):
-            if excel_file.endswith(".xlsx"):
-                # Generate UUID for report_id
-                report_id = str(uuid.uuid4())
+    for company_name in company_folders:
+        excel_folder_path = f"data/{company_name}/excel/"
+        
+        # 해당 회사의 Excel 파일 목록 가져오기
+        excel_files = [blob for blob in blobs 
+                       if blob.name.startswith(excel_folder_path) and blob.name.endswith(".xlsx")]
 
-                # Extract stockfirm_name and date from filename
-                stockfirm_name, date_part = os.path.splitext(excel_file)[0].split("_")
-                report_date = f"{date_part[:4]}-{date_part[4:6]}-{date_part[6:]}"
-                report_date = pd.to_datetime(report_date).date()
+        for excel_blob in excel_files:
+            print(f"Processing file: {excel_blob.name}")
+            
+            # report_id 생성
+            report_id = str(uuid.uuid4())
 
-                # Insert into report table
-                report_insert = {
+            # 파일명에서 증권사 이름과 날짜 추출
+            filename = os.path.basename(excel_blob.name)
+            stockfirm_name, date_part = os.path.splitext(filename)[0].split("_")
+            report_date = f"{date_part[:4]}-{date_part[4:6]}-{date_part[6:]}"
+            report_date = pd.to_datetime(report_date).date()
+
+            # report 테이블에 데이터 삽입
+            report_insert = {
+                "report_id": report_id,
+                "company_name": company_name,
+                "stockfirm_name": stockfirm_name,
+                "report_date": report_date,
+            }
+            session.execute(insert(report_table), report_insert)
+
+            # Excel 파일 다운로드 및 로드
+            excel_data = excel_blob.download_as_bytes()
+            df = pd.read_excel(io.BytesIO(excel_data))
+
+            # Excel 파일의 각 행 처리
+            for idx, row in df.iterrows():
+                text = row.get("text", None)
+                embedding_text = row.get("embedding", None)
+
+                # paragraph_id 생성
+                paragraph_id = str(uuid.uuid4())
+
+                # paragraph 테이블에 데이터 삽입
+                paragraph_insert = {
+                    "paragraph_id": paragraph_id,
                     "report_id": report_id,
-                    "company_name": company_name,
-                    "stockfirm_name": stockfirm_name,
-                    "report_date": report_date,
+                    "paragraph_text": text if text else "None",
                 }
-                session.execute(insert(report_table), report_insert)
+                session.execute(insert(paragraph_table), paragraph_insert)
 
-                # Load Excel file
-                excel_path = os.path.join(company_path, excel_file)
-                df = pd.read_excel(excel_path)
+                # Generate embedding vector for embedding_text
+                embedding_vector = None
+                if embedding_text and isinstance(embedding_text, str):
+                    embedding_vector = embedding_model.get_embedding(embedding_text)
 
-                # Process each row in the Excel file
-                for idx, row in df.iterrows():
-                    text = row["text"]
-                    embedding_text = row["embedding"]
+                # embedding 테이블에 데이터 삽입 (현재 기본 벡터 사용)
+                embedding_insert = {
+                    "embedding_id": str(uuid.uuid4()),
+                    "paragraph_id": paragraph_id,
+                    "text_embedding_vector": embedding_vector,
+                }
+                session.execute(insert(embedding_table), embedding_insert)
 
-                    # Generate UUID for paragraph_id
-                    paragraph_id = str(uuid.uuid4())
-
-                    # Initialize lists for tabular and image IDs
-                    tabular_ids = []
-                    image_ids = []
-
-                    # Use regex to split the text into parts
-                    parts = re.split(r"(?s)(<table>.*?<\/table>|<img alt=.*?\/>)", text)
-
-                    combined_paragraph = ""
-
-                    for part in parts:
-                        if part.startswith("<table>") and part.endswith("</table>"):
-                            # Append tabular content to tabular_ids list
-                            tabular_id = str(uuid.uuid4())
-                            tabular_ids.append(tabular_id)
-                        elif part.startswith("<img alt=") and part.endswith("/>"):
-                            # Append image content to image_ids list
-                            image_id = str(uuid.uuid4())
-                            image_ids.append(image_id)
-                        else:
-                            # Combine paragraph content
-                            combined_paragraph += part.strip() + " "
-
-                    # Trim combined paragraph
-                    combined_paragraph = combined_paragraph.strip()
-
-                    # Insert into paragraph table and commit
-                    paragraph_insert = {
-                        "paragraph_id": paragraph_id,
-                        "report_id": report_id,
-                        "paragraph_text": combined_paragraph if combined_paragraph else "None",
-                        "is_tabular": bool(tabular_ids),
-                        "is_image": bool(image_ids),
-                    }
-                    session.execute(insert(paragraph_table), paragraph_insert)
-                    
-                    # Insert tabular data
-                    for tabular_id, part in zip(tabular_ids, [p for p in parts if p.startswith("<table>") and p.endswith("</table>")]):
-                        session.execute(insert(tabular_table), {
-                            "tabular_id": tabular_id,
-                            "paragraph_id": paragraph_id,
-                            "tabular_text": part.strip(),
-                        })
-
-                    # Insert image data
-                    for image_id, part in zip(image_ids, [p for p in parts if p.startswith("<img alt=") and p.endswith("/>")]):
-                        session.execute(insert(image_table), {
-                            "image_id": image_id,
-                            "paragraph_id": paragraph_id,
-                            "image_text": part.strip(),
-                        })
-
-                    # Generate embedding vector for embedding_text
-                    embedding_vector = None
-                    if embedding_text and isinstance(embedding_text, str):
-                        embedding_vector = embedding_model.get_embedding(embedding_text)
-
-                    # Insert into embedding table
-                    embedding_insert = {
-                        "embedding_id": str(uuid.uuid4()),
-                        "paragraph_id": paragraph_id,
-                        "text_embedding_vector": embedding_vector,
-                        "tabular_id": tabular_ids if tabular_ids else None,
-                        "image_id": image_ids if image_ids else None,
-                    }
-                    session.execute(insert(embedding_table), embedding_insert)
-
-    # Commit transaction
+    # 트랜잭션 커밋
     session.commit()
     print("Data inserted successfully!")

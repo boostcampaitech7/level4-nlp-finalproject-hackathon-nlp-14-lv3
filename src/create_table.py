@@ -69,33 +69,12 @@ def create_table(engine):
     )
 
     # Paragraph table
-    # paragraph_text에 null이 들어가면, 해당 표 혹은 img는 특정 문단이 없는 것으로 간주
     paragraph = Table(
         "paragraph",
         metadata,
         Column("paragraph_id", UUID, primary_key=True),  
         Column("report_id", UUID, ForeignKey("report.report_id"), nullable=False),  # Foreign key to report
         Column("paragraph_text", TEXT, nullable=True),  
-        Column("is_tabular", BOOLEAN, nullable=False, default=False),  # Indicates if a tabular exists
-        Column("is_image", BOOLEAN, nullable=False, default=False),  # Indicates if an image exists
-    )
-
-    # Tabular table
-    tabular = Table(
-        "tabular",
-        metadata,
-        Column("tabular_id", UUID, primary_key=True),  
-        Column("paragraph_id", UUID, ForeignKey("paragraph.paragraph_id"), nullable=False),  # Foreign key to paragraph
-        Column("tabular_text", TEXT, nullable=False),  
-    )
-
-    # Image table
-    image = Table(
-        "image",
-        metadata,
-        Column("image_id", UUID, primary_key=True), 
-        Column("paragraph_id", UUID, ForeignKey("paragraph.paragraph_id"), nullable=False),  # Foreign key to paragraph 
-        Column("image_text", TEXT, nullable=False), 
     )
 
     # Embedding table
@@ -105,8 +84,6 @@ def create_table(engine):
         Column("embedding_id", UUID, primary_key=True),  
         Column("paragraph_id", UUID, ForeignKey("paragraph.paragraph_id"), nullable=False),  # Foreign key to paragraph
         Column("text_embedding_vector", Vector(1024), nullable=False),  # Embedding vector
-        Column("tabular_id", ARRAY(UUID), nullable=True),  # Array of tabular IDs
-        Column("image_id", ARRAY(UUID), nullable=True),  # Array of image IDs
     )
 
     # Create tables in the database

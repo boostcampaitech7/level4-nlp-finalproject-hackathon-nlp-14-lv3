@@ -14,12 +14,10 @@ if __name__ == "__main__":
     # Verify the tables exist
     check_table_exists(engine, "report")
     check_table_exists(engine, "paragraph")
-    check_table_exists(engine, "tabular")
-    check_table_exists(engine, "image")
     check_table_exists(engine, "embedding")
 
     # Define base directory
-    BASE_DIR = "../data/랩큐"
+    BUCKET_NAME = "nlp14"
 
     # Process and insert data
-    process_excel_and_insert_data(engine, BASE_DIR)
+    process_excel_and_insert_data(engine, BUCKET_NAME)
