@@ -20,6 +20,12 @@ class BM25RetrieverWithScores(BM25Retriever):
         return docs_with_scores[: self.k]
 
 
+import os
+import pickle
+
+from sqlalchemy import Engine
+
+
 class CustomizedOkapiBM25:
     _instance = None
 
@@ -32,14 +38,26 @@ class CustomizedOkapiBM25:
         if not hasattr(self, "retriever"):
             self.retriever = None
 
-    def load_retriever(self, conn: Engine, k: int = 10):
+    def load_retriever(
+        self, conn: Engine, k: int = 10, cache_path=".bm25_cache/bm25_index.pkl"
+    ):
+        cache_path = os.path.join(os.getcwd(), cache_path)
         if self.retriever is None:
-            print("Loading BM25 Retriever")
-            texts = get_embedding(conn)
-            self.documents = create_documents(texts)
-            self.retriever = BM25RetrieverWithScores.from_documents(
-                documents=self.documents, k=k
-            )
+            # Check if a cached index exists
+            if os.path.exists(cache_path):
+                print("Loading cached BM25 Retriever")
+                with open(cache_path, "rb") as f:
+                    self.retriever, self.documents = pickle.load(f)
+            else:
+                print("Creating BM25 Retriever from scratch")
+                texts = get_embedding(conn)
+                self.documents = create_documents(texts)
+                self.retriever = BM25RetrieverWithScores.from_documents(
+                    documents=self.documents, k=k
+                )
+                # Save the retriever (and documents if needed) for later use
+                with open(cache_path, "wb") as f:
+                    pickle.dump((self.retriever, self.documents), f)
 
     def get_pids_from_sparse(self, query: str):
         query = clean_korean_text(query)
