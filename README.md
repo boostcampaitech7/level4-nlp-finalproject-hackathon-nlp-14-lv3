@@ -24,4 +24,7 @@ cd level4-nlp-finalproject-hackathon-nlp-14-lv3 &&
 git submodule update --init &&
 git checkout dev &&
 pip install -r ./src/requirements.txt
+
+# Open_API Key 발급후
+src폴더 안에 .env로 OPENAI_API_KEY = '발급 키' 입력
 ```

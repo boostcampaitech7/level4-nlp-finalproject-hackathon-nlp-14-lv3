@@ -11,3 +11,7 @@ isort==5.13.2
 FlagEmbedding
 cloud-sql-python-connector[pg8000]
 google-api-python-client 
+python-dotenv
+langchain-openai
+konlpy
+rank_bm25
