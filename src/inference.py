@@ -7,8 +7,7 @@ from langchain_openai import ChatOpenAI
 from sqlalchemy import text
 
 from src.bm25retriever_with_scores import CustomizedOkapiBM25
-
-# from main import EvaluationOutput, ServiceOutput, ValidationOutput
+from src.model import EvaluationOutput, ServiceOutput, ValidationOutput
 from src.text_embedding import EmbeddingModel  # 임베딩 모델 (bge-m3) 불러오기
 from src.utils.load_engine import SqlEngine
 
@@ -66,8 +65,7 @@ def RAG(query: str, spr_limit: int = 10, dpr_limit: int = 3) -> str:
     return contexts
 
 
-# def run_inference(query: str) -> ServiceOutput:
-def run_inference(query: str):
+def run_inference(query: str) -> ServiceOutput:
     query = query.strip()
     try:
         if not query:
@@ -86,8 +84,7 @@ def run_inference(query: str):
         return "An error occurred during inference. Please try again later."
 
 
-# def run_evaluation(query: str) -> EvaluationOutput:
-def run_evaluation(query: str):
+def run_evaluation(query: str) -> EvaluationOutput:
     query = query.strip()
     try:
         if not query:
@@ -108,8 +105,7 @@ def run_evaluation(query: str):
         return "An error occurred during inference. Please try again later."
 
 
-# def run_validation(train_test_ratio: str) -> ValidationOutput:
-def run_validation(train_test_ratio: str):
+def run_validation(train_test_ratio: str) -> ValidationOutput:
     import evaluate
     from datasets import load_dataset
 
