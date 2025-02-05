@@ -68,7 +68,7 @@ SELECT
     r.stockfirm_name,
     r.report_id,
     r.report_date,
-    p.paragraph_text
+    p.paragraph_text AS paragraph_text
 FROM similar_docs sd
 JOIN paragraph p 
     ON sd.paragraph_id = p.paragraph_id

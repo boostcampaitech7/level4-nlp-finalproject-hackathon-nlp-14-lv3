@@ -18,41 +18,23 @@ def create_documents(rows: List[RowMapping]):
     documents = []
     all_texts = get_info_and_texts(rows)
     for metadata, text in all_texts:
-        text = clean_korean_text(text)
-        #documents.append(Document(page_content=text, metadata=metadata))
+        documents.append(Document(page_content=text, metadata=metadata))
     return documents
 
 
 def get_info_and_texts(texts: List[RowMapping]):
     texts_total = []
     for row in texts:
-        temp = ""
         paragraph_text = row["paragraph_text"]
-        # tabular_texts = row["tabular_texts"]
-        # image_texts = row["image_texts"]
-
-        def merge_texts(arg):
-            temp = ""
-            space = " "
-            if isinstance(arg, List):
-                temp += space.join([t for t in arg]) + space
-            elif isinstance(arg, str) and arg != "None":
-                temp += arg + space
-            return temp
-
-        temp += merge_texts(paragraph_text)
-        # temp += merge_texts(tabular_texts)
-        # temp += merge_texts(image_texts)
-
         metadata = {
             "report_id": row["report_id"],
             "company_name": row["company_name"],
             "stockfirm_name": row["stockfirm_name"],
             "report_date": row["report_date"],
             "paragraph_id": row["paragraph_id"],
-            "raw_text": clean_text(temp),
+            "raw_text": paragraph_text,
         }
-        texts_total.append((metadata, temp))
+        texts_total.append((metadata, clean_korean_text(paragraph_text)))
     return texts_total
 
 

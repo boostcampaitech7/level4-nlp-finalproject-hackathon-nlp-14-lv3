@@ -38,7 +38,7 @@ sparse_retriever = CustomizedOkapiBM25()
 sparse_retriever.load_retriever(engine, k=10)
 
 
-def RAG(query: str, spr_limit: int = 10, dpr_limit: int = 10) -> str:
+def RAG(query: str, spr_limit: int = 10, dpr_limit: int = 3) -> str:
     """
     query_embedding: 문자열 query의 임베딩 결과
 
@@ -150,10 +150,10 @@ def run_dense_retriever(query_vector: List[float], paragraph_ids: List[str]):
 SELECT paragraph_id 
 FROM embedding
 WHERE paragraph_id in ({joined_ids})
-ORDER BY text_embedding_vector <-> '{vector_array}'::vector"""
+ORDER BY clean_text_embedding_vector <-> '{vector_array}'::vector"""
     )
     results = engine.conn.execute(query)
-    return [row for row in results]
+    return [row for row in results.mappings()]
 
 
 if __name__ == "__main__":
