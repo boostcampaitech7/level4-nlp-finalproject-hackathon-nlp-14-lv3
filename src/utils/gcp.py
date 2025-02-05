@@ -68,18 +68,12 @@ SELECT
     r.stockfirm_name,
     r.report_id,
     r.report_date,
-    p.paragraph_text AS paragraph_text,
-    ARRAY_AGG(DISTINCT t.tabular_text) FILTER (WHERE t.tabular_text IS NOT NULL) AS tabular_texts,
-    ARRAY_AGG(DISTINCT i.image_text) FILTER (WHERE i.image_text IS NOT NULL) AS image_texts
+    p.paragraph_text
 FROM similar_docs sd
 JOIN paragraph p 
     ON sd.paragraph_id = p.paragraph_id
 JOIN report r 
     ON p.report_id = r.report_id
-LEFT JOIN tabular t 
-    ON p.paragraph_id = t.paragraph_id
-LEFT JOIN image i 
-    ON p.paragraph_id = i.paragraph_id
 GROUP BY 
     r.company_name,
     r.stockfirm_name,
