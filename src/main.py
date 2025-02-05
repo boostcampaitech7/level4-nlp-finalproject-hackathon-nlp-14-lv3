@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from inference import run_evaluation, run_inference
+from inference import run_evaluation, run_inference, run_validation
 
 
 # 요청 데이터 모델 정의
@@ -32,6 +32,16 @@ class EvaluationOutput(BaseModel):
     answer: str
 
 
+class ValidationInput(BaseModel):
+    train_test_ratio: str
+
+
+class ValidationOutput(BaseModel):
+    question: str
+    context: list[str]
+    answer: str
+
+
 app = FastAPI()
 
 app.add_middleware(
@@ -55,6 +65,12 @@ async def inference(request: ServiceInput):
 async def evaluation(request: EvaluationInput):
     query = request.query
     return run_evaluation(query)
+
+
+@app.post("/validation", response_model=ValidationOutput)
+async def validation(request: ValidationInput):
+    train_test_ratio = request.train_test_ratio
+    return run_validation(train_test_ratio)
 
 
 # FastAPI 서버 실행 명령어

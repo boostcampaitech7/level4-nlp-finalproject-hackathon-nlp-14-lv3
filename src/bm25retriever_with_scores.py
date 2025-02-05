@@ -15,8 +15,9 @@ class BM25RetrieverWithScores(BM25Retriever):
     ) -> List[Tuple[Document, float]]:
         processed_query = self.preprocess_func(query)
         scores = self.vectorizer.get_scores(processed_query)
-        docs_with_scores = list(zip(self.docs, scores))
+        docs_with_scores = list(zip(self.retrieved, scores))
         docs_with_scores.sort(key=lambda x: x[1], reverse=True)
+        # return_docs = self.vectorizer.get_top_n(processed_query, self.retrieved, n=self.k)?
         return docs_with_scores[: self.k]
 
 
@@ -43,8 +44,8 @@ class CustomizedOkapiBM25:
 
     def get_pids_from_sparse(self, query: str):
         query = clean_korean_text(query)
-        self.docs = self.retriever.invoke(query)
-        paragraph_ids = [doc.metadata["paragraph_id"] for doc, _ in self.docs]
+        self.retrieved = self.retriever.invoke(query)
+        paragraph_ids = [doc.metadata["paragraph_id"] for doc, _ in self.retrieved]
         return paragraph_ids
 
     def get_contexts_by_ids(self, ids: List[UUID], limit):
@@ -56,6 +57,8 @@ class CustomizedOkapiBM25:
 
         # Sort the documents based on their position in `ids`
         sorted_docs = sorted(self.documents, key=sort_key)[:limit]
+
+        [doc for doc in self.documents if doc.metadata["paragraph_id"] in ids]
         reordering = LongContextReorder()
         reordered_docs = reordering.transform_documents(sorted_docs)
         contexts = []

@@ -7,6 +7,8 @@ from langchain_openai import ChatOpenAI
 from sqlalchemy import text
 
 from src.bm25retriever_with_scores import CustomizedOkapiBM25
+
+# from main import EvaluationOutput, ServiceOutput, ValidationOutput
 from src.text_embedding import EmbeddingModel  # 임베딩 모델 (bge-m3) 불러오기
 from src.utils.load_engine import SqlEngine
 
@@ -33,10 +35,10 @@ embedding_model.load_model()
 engine = SqlEngine()
 
 sparse_retriever = CustomizedOkapiBM25()
-sparse_retriever.load_retriever(engine, k=5)
+sparse_retriever.load_retriever(engine, k=10)
 
 
-def RAG(query: str, spr_limit: int = 10, dpr_limit: int = 3) -> str:
+def RAG(query: str, spr_limit: int = 10, dpr_limit: int = 10) -> str:
     """
     query_embedding: 문자열 query의 임베딩 결과
 
@@ -64,7 +66,8 @@ def RAG(query: str, spr_limit: int = 10, dpr_limit: int = 3) -> str:
     return contexts
 
 
-def run_inference(query: str) -> str:
+# def run_inference(query: str) -> ServiceOutput:
+def run_inference(query: str):
     query = query.strip()
     try:
         if not query:
@@ -77,13 +80,14 @@ def run_inference(query: str) -> str:
         if not response or not response.strip():
             raise ValueError("The model returned an empty or invalid response.")
 
-        return response
+        return {"text": response}
     except Exception as e:
         print(f"Error during inference: {e}")
         return "An error occurred during inference. Please try again later."
 
 
-def run_evaluation(query: str) -> str:
+# def run_evaluation(query: str) -> EvaluationOutput:
+def run_evaluation(query: str):
     query = query.strip()
     try:
         if not query:
@@ -102,6 +106,27 @@ def run_evaluation(query: str) -> str:
     except Exception as e:
         print(f"Error during inference: {e}")
         return "An error occurred during inference. Please try again later."
+
+
+# def run_validation(train_test_ratio: str) -> ValidationOutput:
+def run_validation(train_test_ratio: str):
+    import evaluate
+    from datasets import load_dataset
+
+    dataset = load_dataset("json", data_files="datasets.json", field="qa_sets")
+    train_ds = dataset["train"]
+    for row in train_ds:
+        question = row["question"]
+        expected_contexts = row["context"]
+        expected_answer = row["answer"]
+        source = row["source"]
+
+        context = RAG(question)
+        contexts, joined_contexts = format_retrieved_docs(
+            context, return_single_str=False
+        )
+        answer = chain.invoke({"question": query, "context": joined_contexts})
+        squad_metric = evaluate.load("squad")
 
 
 def format_retrieved_docs(docs: List[str], return_single_str=True):
@@ -125,8 +150,7 @@ def run_dense_retriever(query_vector: List[float], paragraph_ids: List[str]):
 SELECT paragraph_id 
 FROM embedding
 WHERE paragraph_id in ({joined_ids})
-ORDER BY text_embedding_vector <-> '{vector_array}'::vector
-"""
+ORDER BY text_embedding_vector <-> '{vector_array}'::vector"""
     )
     results = engine.conn.execute(query)
     return [row for row in results]
