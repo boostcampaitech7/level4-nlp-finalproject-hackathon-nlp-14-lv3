@@ -35,3 +35,13 @@ class ValidationOutput(BaseModel):
     question: str
     context: list[str]
     answer: str
+
+
+class GEvalResult(BaseModel):
+    query: str
+    retrieval_contexts: List[str]
+    generated_answer: str
+    expected_answer: str
+    retrieval_score: List[int]  # out of 20
+    generation_score: List[int]  # out of 30
+    total_score: int  # out of 50
