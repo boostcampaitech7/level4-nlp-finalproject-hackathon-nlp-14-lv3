@@ -18,6 +18,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
 from src.bm25retriever_with_scores import CustomizedOkapiBM25
 from src.model import EvaluationOutput, GEvalResult, ServiceOutput, ValidationOutput
+from src.my_hosted_llm import MyHostedLLM
 from src.rule_retriever import RuleRetriever
 from src.text_embedding import EmbeddingModel
 from src.utils.load_engine import SqlEngine
@@ -32,7 +33,7 @@ prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            """You are a knowledgeable financial chatbot that assists users by synthesizing information from retrieved brokerage firm reports. When answering a user’s query, follow these steps:
+            """You are a knowledgeable financial chatbot for Korean that assists users by synthesizing information from retrieved brokerage firm reports. When answering a user’s query, follow these steps:
 Direct Answer: Provide a clear, concise, and factual response to the user's question, integrating relevant details from the retrieved reports.
 Supporting Evidence: Reference key points from the retrieved content (such as report names, dates, and major findings) that support your answer.
 Content Summary: At the end of your answer, include a brief summary that outlines:
@@ -61,9 +62,11 @@ YOUR ANSWER HERE
     ]
 )
 model_openai = ChatOpenAI(model="gpt-4o-mini")
+model_ollama = MyHostedLLM(url=os.environ["OLLAMA_URL"])
 
 output_parser = StrOutputParser()
 chain_openai = prompt | model_openai | output_parser
+chain_ollama = prompt | model_ollama | output_parser
 
 prompt_geval = ChatPromptTemplate.from_messages(
     [
@@ -517,8 +520,9 @@ def format_retrieved_docs(docs: List[str], return_single_str=True):
 
 if __name__ == "__main__":
     # run_validation(chain1_rag=chain_lg, chain2_geval=chain_geval_lg)
-    run_validation(chain1_rag=chain_openai, chain2_geval=chain_geval_openai)
+    # run_validation(chain1_rag=chain_openai, chain2_geval=chain_geval_openai)
+    run_validation(chain1_rag=chain_ollama, chain2_geval=chain_geval_openai)
     # while True:
     #     query = input("질의를 입력해주세요: ")
-    #     result = run_inference(query, chain=chain_openai)
+    #     result = run_inference(query, chain=chain_ollama)
     #     print(result)
