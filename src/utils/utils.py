@@ -94,6 +94,8 @@ def clean_text(text: str):
 
 def filter_by_company(docs: List[Document], companies: List[str]) -> List[Document]:
     filtered_docs = []
+    if len(companies) == 0:
+        return docs
     for company in companies:
         for doc in docs:
             if doc.metadata["company_name"] == company:
