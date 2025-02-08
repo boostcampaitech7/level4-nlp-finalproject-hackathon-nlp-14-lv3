@@ -1,4 +1,10 @@
+from typing import List
+
 from FlagEmbedding import BGEM3FlagModel
+from langchain_core.documents import Document
+from sqlalchemy import text
+
+from src.utils.load_engine import SqlEngine
 
 
 class EmbeddingModel:
@@ -29,6 +35,60 @@ class EmbeddingModel:
             return self.model.encode(sentence, max_length=max_length)["dense_vecs"]
         else:
             raise ValueError("입력은 문자열이어야 합니다.")
+
+    def run_dense_retrieval(
+        self, engine: SqlEngine, query_vector: List[float], paragraph_ids: List[str]
+    ):
+        vector_array = f"[{','.join(str(x) for x in query_vector)}]"
+        joined_ids = (
+            ", ".join(f"'{str(u)}'" for u in paragraph_ids)
+            if len(paragraph_ids) > 0
+            else ""
+        )
+        query = text(
+            f"""
+WITH similar_docs AS (
+    SELECT paragraph_id, clean_text_embedding_vector
+    FROM embedding
+)
+SELECT
+    p.paragraph_id,
+    r.company_name,
+    r.stockfirm_name,
+    r.report_id,
+    r.report_date,
+    p.paragraph_text AS paragraph_text
+FROM similar_docs sd
+JOIN paragraph p 
+    ON sd.paragraph_id = p.paragraph_id
+JOIN report r 
+    ON p.report_id = r.report_id
+{"WHERE p.paragraph_id in (" if joined_ids != "" else ""}{joined_ids}{")" if joined_ids != "" else ""}
+GROUP BY
+    r.company_name,
+    r.stockfirm_name,
+    r.report_id,
+    r.report_date,
+    p.paragraph_id,
+    p.paragraph_text,
+    sd.clean_text_embedding_vector
+ORDER BY sd.clean_text_embedding_vector <-> '{vector_array}'::vector
+{"limit 10" if joined_ids == "" else ""}
+"""
+        )
+        results = engine.conn.execute(query)
+
+        row_to_documents = []
+        for row in results.mappings():
+            metadata = {
+                k: v
+                for k, v in zip(row._key_to_index, row._data)
+                if k != "paragraph_text"
+            }
+            row_to_documents.append(
+                Document(page_content=row["paragraph_text"], metadata=metadata)
+            )
+        return row_to_documents
 
 
 # if __name__ == "__main__":

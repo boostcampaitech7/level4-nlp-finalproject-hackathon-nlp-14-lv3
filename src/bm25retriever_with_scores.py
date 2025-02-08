@@ -39,9 +39,9 @@ class CustomizedOkapiBM25:
             self.retriever = None
 
     def load_retriever(
-        self, conn: Engine, k: int = 10, cache_path=".bm25_cache/bm25_index.pkl"
+        self, conn: Engine, k: int = 30, cache_path=".bm25_cache/bm25_index.pkl"
     ):
-        cache_path = os.path.join(os.getcwd(), cache_path)
+        cache_path = os.path.join(os.getcwd(), f"{cache_path}_{k}")
         if self.retriever is None:
             # Check if a cached index exists
             if os.path.exists(cache_path):
@@ -58,6 +58,16 @@ class CustomizedOkapiBM25:
                 # Save the retriever (and documents if needed) for later use
                 with open(cache_path, "wb") as f:
                     pickle.dump((self.retriever, self.documents), f)
+
+    def run_sparse_retrieval(self, query: str):
+        query = clean_korean_text(query)
+        docs = self.retriever.invoke(query)
+        self.docs = []
+        self.scores = []
+        for doc, score in docs:
+            self.docs.append(doc)
+            self.scores.append(score)
+        return self.docs
 
     def get_pids_from_sparse(self, query: str):
         query = clean_korean_text(query)

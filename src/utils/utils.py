@@ -10,7 +10,6 @@ from transformers import BertTokenizer
 
 okt = Okt()
 # mecab = Mecab()
-tokenizer = BertTokenizer.from_pretrained("monologg/kobert")
 
 
 # 사용하지 않는 Document 주석 처리, 만일 사용할 때가 온다면 주석 제거 후 사용용
@@ -91,3 +90,12 @@ def clean_korean_text(text: str):
 
 def clean_text(text: str):
     return text.replace("\n", " ").replace("\r", "")
+
+
+def filter_by_company(docs: List[Document], companies: List[str]) -> List[Document]:
+    filtered_docs = []
+    for company in companies:
+        for doc in docs:
+            if doc.metadata["company_name"] == company:
+                filtered_docs.append(doc)
+    return filtered_docs
