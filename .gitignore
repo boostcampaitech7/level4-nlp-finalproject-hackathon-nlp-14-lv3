@@ -1,0 +1,10 @@
+__pycache__/
+.vscode/
+output/
+sample/
+.bm25_cache/
+.env
+*.faiss
+*.pkl
+*.code-workspace
+compact-orb-448311-n8-fba16d494fa8.json
