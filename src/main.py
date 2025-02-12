@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from inference import run_evaluation, run_inference, run_validation
+from src.inference import run_evaluation, run_inference, run_validation
 from src.model import (
     EvaluationInput,
     EvaluationOutput,
@@ -26,8 +26,7 @@ app.add_middleware(
 async def inference(request: ServiceInput):
     text = request.messages[0].text
     print(f"Message: f{text}")  # For debugging
-    response = run_inference(text)
-    return {"text": response}
+    return run_inference(text)
 
 
 @app.post("/evaluation", response_model=EvaluationOutput)
@@ -43,5 +42,5 @@ async def validation(request: ValidationInput):
 
 
 # FastAPI 서버 실행 명령어
-# uvicorn main:app --port 8000 --reload
+# uvicorn src.main:app --port 8000 --reload
 # cloudflared tunnel --url http://localhost:8000

@@ -289,7 +289,7 @@ def RAG(query: str, limit: int = 5, dpr_limit: int = 3) -> str:
     return contexts_reordered
 
 
-def run_inference(query: str, chain: RunnableSerializable[dict, str]) -> ServiceOutput:
+def run_inference(query: str) -> ServiceOutput:
     query = query.strip()
     try:
         if not query:
@@ -297,20 +297,22 @@ def run_inference(query: str, chain: RunnableSerializable[dict, str]) -> Service
 
         contexts = RAG(query)
         context = format_retrieved_docs(contexts)
-        response = chain.invoke({"question": query, "context": context})
+        if len(context) == 0:
+            return ServiceOutput({"text": "관련 문서를 찾지 못했습니다."})
+        else:
+            response = chain_openai.invoke({"question": query, "context": context})
 
         if not response or not response.strip():
             raise ValueError("The model returned an empty or invalid response.")
 
-        return {"text": response}
+        # return {"text": response}
+        return ServiceOutput(text=response)
     except Exception as e:
         print(f"Error during inference: {e}")
         return "An error occurred during inference. Please try again later."
 
 
-def run_evaluation(
-    query: str, chain: RunnableSerializable[dict, str]
-) -> EvaluationOutput:
+def run_evaluation(query: str) -> EvaluationOutput:
     query = query.strip()
     try:
         if not query:
@@ -320,7 +322,7 @@ def run_evaluation(
         contexts, joined_context = format_retrieved_docs(
             context, return_single_str=False
         )
-        response = chain.invoke({"question": query, "context": joined_context})
+        response = chain_openai.invoke({"question": query, "context": joined_context})
 
         if not response or not response.strip():
             raise ValueError("The model returned an empty or invalid response.")
@@ -521,7 +523,11 @@ def format_retrieved_docs(docs: List[str], return_single_str=True):
 if __name__ == "__main__":
     # run_validation(chain1_rag=chain_lg, chain2_geval=chain_geval_lg)
     # run_validation(chain1_rag=chain_openai, chain2_geval=chain_geval_openai)
-    run_validation(chain1_rag=chain_ollama, chain2_geval=chain_geval_openai)
+    # run_validation(chain1_rag=chain_ollama, chain2_geval=chain_geval_openai)
+    run_validation_without_retriever(
+        chain1_rag=chain_openai_no_retriever,
+        chain2_geval=chain_geval_openai_no_retriever,
+    )
     # while True:
     #     query = input("질의를 입력해주세요: ")
     #     result = run_inference(query, chain=chain_ollama)
