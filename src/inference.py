@@ -521,14 +521,22 @@ def format_retrieved_docs(docs: List[str], return_single_str=True):
 
 
 if __name__ == "__main__":
-    # run_validation(chain1_rag=chain_lg, chain2_geval=chain_geval_lg)
-    # run_validation(chain1_rag=chain_openai, chain2_geval=chain_geval_openai)
-    # run_validation(chain1_rag=chain_ollama, chain2_geval=chain_geval_openai)
-    run_validation_without_retriever(
-        chain1_rag=chain_openai_no_retriever,
-        chain2_geval=chain_geval_openai_no_retriever,
-    )
-    # while True:
-    #     query = input("질의를 입력해주세요: ")
-    #     result = run_inference(query, chain=chain_ollama)
-    #     print(result)
+    print("질의를 기반으로 유사지문 추출 및 답변을 생성합니다.")
+    do_geval = input("G-Eval을 실행할까요? (y/N)")
+    if do_geval.lower() in ["y", "yes", "ye"]:
+        do_geval = True
+    else:
+        do_geval = False
+    while True:
+        query = input("질의를 입력해주세요: ")
+        ground_truth = input("기대하는 정답을 입력해주세요: ")
+        result = run_evaluation(query, chain=chain_openai)
+        contexts = "\n".join(result.context)
+        answer = result.answer
+        print(f"Answer: {answer}")
+        print(f"Contexts: {contexts}")
+        if do_geval:
+            print("G-Eval 실행중...")
+            geval_result = compute_geval(chain_geval_openai, query, contexts, answer, result, ground_truth, chain=chain_openai)
+            total_score = sum(geval_result["retrieval_score"]) + sum(geval_result["generation_score"])
+            print(f"G-Eval 점수: {total_score}/50")

@@ -2,8 +2,10 @@ datasets
 langchain
 langchain-community
 langchain-huggingface
+langchain-openai
 transformers
 accelerate
+evaluate
 torch
 pre-commit==4.0.1
 black==24.10.0
@@ -11,3 +13,9 @@ isort==5.13.2
 FlagEmbedding
 cloud-sql-python-connector[pg8000]
 google-api-python-client 
+pgvector
+nest-asyncio
+llama-parse
+pdfplumber
+openai
+inference-sdk
