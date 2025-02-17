@@ -1,6 +1,6 @@
 # 증권사 자료 기반 주식 LLM 서비스 개발
 
-![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54) ![Jupyter Notebook](https://img.shields.io/badge/jupyter-%23FA0F00.svg?style=for-the-badge&logo=jupyter&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi) ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white) ![ChatGPT](https://img.shields.io/badge/chatGPT-74aa9c?style=for-the-badge&logo=openai&logoColor=white) ![Google Cloud](https://img.shields.io/badge/GoogleCloud-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white) ![Langchain](https://img.shields.io/badge/langchain-%1c3c35.svg?style=for-the-badge&logo=langchain&logoColor=white)
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54) ![Jupyter Notebook](https://img.shields.io/badge/jupyter-%23FA0F00.svg?style=for-the-badge&logo=jupyter&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi) ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white) ![ChatGPT](https://img.shields.io/badge/chatGPT-74aa9c?style=for-the-badge&logo=openai&logoColor=white) ![Google Cloud](https://img.shields.io/badge/GoogleCloud-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white) ![Langchain](https://img.shields.io/badge/langchain-2b9607.svg?style=for-the-badge&logo=langchain&logoColor=white) ![huggingface](https://img.shields.io/badge/huggingface-FFD21E.svg?style=for-the-badge&logo=huggingface&logoColor=black)
 
 ## 선정 배경
 
@@ -51,10 +51,10 @@ GPT 4o-mini를 사용해 Context 전달 유무에 따른 G-Eval 성능 비교
 
 ## 팀원 소개
   
-| ![KakaoTalk_20241224_115814106](https://github.com/user-attachments/assets/338cb43f-8d34-4d4b-bc8c-fb66f48d8a5c) | ![KakaoTalk_20241224_115814106](https://github.com/user-attachments/assets/338cb43f-8d34-4d4b-bc8c-fb66f48d8a5c) | ![KakaoTalk_20241224_115814106](https://github.com/user-attachments/assets/7c0a0b02-808a-4d41-a17d-e66d3f0728bd) | ![KakaoTalk_20241224_115814106](https://github.com/user-attachments/assets/a13a1c7c-7346-43f6-b949-cfb1204fc695) | ![KakaoTalk_20241224_115814106](https://github.com/user-attachments/assets/933002f0-c5fe-44aa-ba9d-de7acc07ecd4) |
+| <img alt="kyungin" src="assets/kyungin.jpeg" width="200" /> | <img alt="juneseop" src="assets/kkhajiit.jpeg" width="200" /> | <img alt="chaeyeon" src="assets/chaeyeon.jpeg" width="200" /> | <img alt="beom" src="assets/beom.jpeg" width="200" /> | <img alt="zion" src="assets/zion.jpeg" width="200" /> |
 | :---: | :---: | :---: | :---: | :---: |  
 | 김경인 | 김준섭 | 김채연 | 오승범 | 이시온 |
-| Data & DB | Serving & RAG | Data & DB | Data & RAG | RAG |
+| Data & DB | Serving & RAG | Data & DB | Data & RAG | RAG & G-Eval |
 
 
 ## 서비스 아키텍쳐
